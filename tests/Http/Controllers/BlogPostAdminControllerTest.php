@@ -4,7 +4,6 @@ namespace Tests\Http\Controllers;
 
 use App\Http\Controllers\BlogPostAdminController;
 use App\Models\BlogPost;
-use App\Models\User;
 use Tests\TestCase;
 
 class BlogPostAdminControllerTest extends TestCase
