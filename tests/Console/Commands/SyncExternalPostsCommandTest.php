@@ -21,7 +21,12 @@ class SyncExternalPostsCommandTest extends TestCase
         config()->set('services.external_feeds', $urls);
 
         $this->artisan('sync:externals')
-            ->assertExitCode(0);
+            ->assertExitCode(0)
+            ->expectsOutput('Fetching 3 feeds')
+            ->expectsOutput("\t- https://test-a.com")
+            ->expectsOutput("\t- https://test-b.com")
+            ->expectsOutput("\t- https://test-c.com")
+            ->expectsOutput('Done');
 
         $this->assertEquals($urls, RssRepositoryFake::getUrls());
 
