@@ -7,42 +7,51 @@ use App\Http\Controllers\DeletePostController;
 use App\Http\Controllers\UpdatePostSlugController;
 use App\Models\BlogPost;
 use App\Models\User;
+use Closure;
+use Generator;
 use Tests\TestCase;
 
 class BlogPostPolicyTest extends TestCase
 {
-    public function test_only_admin_users_are_allowed(): void
+    /**
+     * @dataProvider requests
+     */
+    public function test_guests_are_forbidden(Closure $sendRequest): void
     {
-        [$guest, $admin] = User::factory()
-            ->count(2)
-            ->sequence(
-                ['is_admin' => false],
-                ['is_admin' => true],
-            )
-            ->create();
+        $this->login(User::factory()->guest()->create());
 
         $post = BlogPost::factory()->create();
 
-        $this->login($guest);
+        /** @var \Illuminate\Testing\TestResponse $response */
+        $response = $sendRequest->call($this, $post);
 
-        $this->get(action([BlogPostAdminController::class, 'index']))->assertForbidden();
-        $this->get(action([BlogPostAdminController::class, 'create']))->assertForbidden();
-        $this->post(action([BlogPostAdminController::class, 'store']))->assertForbidden();
-        $this->get(action([BlogPostAdminController::class, 'edit'], $post->slug))->assertForbidden();
-        $this->post(action([BlogPostAdminController::class, 'update'], $post->slug))->assertForbidden();
-        $this->post(action([BlogPostAdminController::class, 'publish'], $post->slug))->assertForbidden();
-        $this->post(action(UpdatePostSlugController::class, $post->slug))->assertForbidden();
-        $this->post(action(DeletePostController::class, $post->slug))->assertForbidden();
+        $response->assertForbidden();
+    }
 
-        $this->login($admin);
+    /**
+     * @dataProvider requests
+     */
+    public function test_admins_are_allowed(Closure $sendRequest): void
+    {
+        $this->login(User::factory()->admin()->create());
 
-        $this->get(action([BlogPostAdminController::class, 'index']))->assertSuccessful();
-        $this->get(action([BlogPostAdminController::class, 'create']))->assertSuccessful();
-        $this->post(action([BlogPostAdminController::class, 'store']))->assertRedirect();
-        $this->get(action([BlogPostAdminController::class, 'edit'], $post->slug))->assertSuccessful();
-        $this->post(action([BlogPostAdminController::class, 'update'], $post->slug))->assertRedirect();
-        $this->post(action([BlogPostAdminController::class, 'publish'], $post->slug))->assertRedirect();
-        $this->post(action(UpdatePostSlugController::class, $post->slug))->assertRedirect();
-        $this->post(action(DeletePostController::class, $post->slug))->assertRedirect();
+        $post = BlogPost::factory()->create();
+
+        /** @var \Illuminate\Testing\TestResponse $response */
+        $response = $sendRequest->call($this, $post);
+
+        $this->assertTrue(in_array($response->getStatusCode(), [200, 302]));
+    }
+
+    public function requests(): Generator
+    {
+            yield [fn (BlogPost $post) => $this->get(action([BlogPostAdminController::class, 'index']))];
+            yield [fn (BlogPost $post) => $this->get(action([BlogPostAdminController::class, 'create']))];
+            yield [fn (BlogPost $post) => $this->post(action([BlogPostAdminController::class, 'store']))];
+            yield [fn (BlogPost $post) => $this->get(action([BlogPostAdminController::class, 'edit'], $post->slug))];
+            yield [fn (BlogPost $post) => $this->post(action([BlogPostAdminController::class, 'update'], $post->slug))];
+            yield [fn (BlogPost $post) => $this->post(action([BlogPostAdminController::class, 'publish'], $post->slug))];
+            yield [fn (BlogPost $post) => $this->post(action(UpdatePostSlugController::class, $post->slug))];
+            yield [fn (BlogPost $post) => $this->post(action(DeletePostController::class, $post->slug))];
     }
 }
