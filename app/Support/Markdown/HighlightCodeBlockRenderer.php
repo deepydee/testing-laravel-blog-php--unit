@@ -20,7 +20,13 @@ class HighlightCodeBlockRenderer extends FencedCodeRenderer
 
         $content = $element->getContents();
 
-        $content = preg_replace_callback('/\&lt;[\w\s\<\"\=\-\>\/]+hljs[\w\s\<\"\=\-\>\/]+/', function ($match) {
+        $content = preg_replace_callback('
+            /\&lt;                      # start <, which is escaped because of our markdown convertor
+                [\w\s\<\"\=\-\>\/]+     # thrre can be a whole bunch of characters before the tag name
+                hljs                    # every tag should be called `hljs`
+                [\w\s\<\"\=\-\>\/]+     # tags can get different attributes that are added as classes
+            /x
+        ', function ($match) {
             $match = str_replace('<span class="hljs-title">', '', $match[0] ?? '');
 
             $match = str_replace('</span>', '', $match);
